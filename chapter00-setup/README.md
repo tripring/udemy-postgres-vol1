@@ -137,24 +137,24 @@ udemart=#
 
 ### Step 3: bastionからinit.sql / setup.sqlを実行する
 
-ホストPCにクローンした教材ディレクトリは、bastion内の `~/course/` にマウントされています。
+ホストPCにクローンした教材ディレクトリは、bastion内でも同じ名前の `~/udemy-postgres-vol1/` にマウントされています。
 
 ```bash
 # まず共通スキーマを作成
-psql -f ~/course/chapter00-setup/init.sql
+psql -f ~/udemy-postgres-vol1/chapter00-setup/init.sql
 
 # 例: Chapter 01のsetup.sqlを実行
-psql -f ~/course/chapter01-sql/setup.sql
+psql -f ~/udemy-postgres-vol1/chapter01-sql/setup.sql
 
 # ファイル一覧を確認したい場合
-ls ~/course/
+ls ~/udemy-postgres-vol1/
 ```
 
 psqlを開いたまま別のSQLファイルを実行したい場合は `\i` コマンドが使えます。
 
 ```sql
 -- psql内から実行する場合
-\i /home/student/course/chapter01-sql/setup.sql
+\i /home/student/udemy-postgres-vol1/chapter01-sql/setup.sql
 ```
 
 ### SSHトンネリング（GUIツールを使いたい場合）
@@ -283,7 +283,7 @@ docker compose down -v
 docker compose up -d --build
 
 # bastionにSSH接続し、共通スキーマを作成し直す
-psql -f ~/course/chapter00-setup/init.sql
+psql -f ~/udemy-postgres-vol1/chapter00-setup/init.sql
 ```
 
 ---
@@ -294,5 +294,5 @@ psql -f ~/course/chapter00-setup/init.sql
 
 ```bash
 # setup.sqlでデータを投入
-psql -f ~/course/chapter01-sql/setup.sql
+psql -f ~/udemy-postgres-vol1/chapter01-sql/setup.sql
 ```
