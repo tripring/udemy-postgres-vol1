@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: udemart-db
+    environment:
+      POSTGRES_USER: udemart
+      POSTGRES_PASSWORD: udemart123
+      POSTGRES_DB: udemart
+    ports:
+      - "5432:5432"       # 直接接続用（Chapter 01〜04）
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./chapter00-setup/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c effective_cache_size=512MB
+      -c max_connections=100
+      -c log_min_duration_statement=1000
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - udemart-net
+
+  bastion:
+    build:
+      context: .
+      dockerfile: Dockerfile.bastion
+    container_name: udemart-bastion
+    ports:
+      - "2222:22"         # SSH接続用（踏み台サーバー）
+    volumes:
+      - .:/home/student/course  # コース教材をbastion内から参照できるようにマウント
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - udemart-net
+
+networks:
+  udemart-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

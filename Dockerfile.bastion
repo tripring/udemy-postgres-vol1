@@ -1,0 +1,44 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    postgresql-client \
+    curl \
+    vim \
+    less \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# SSHデーモンの起動に必要なディレクトリ
+RUN mkdir -p /var/run/sshd
+
+# studentユーザーを作成（受講者がSSH接続するアカウント）
+RUN useradd -m -s /bin/bash student && \
+    echo 'student:student123' | chpasswd
+
+# パスワード認証を有効化
+RUN sed -i \
+    -e 's/#PasswordAuthentication yes/PasswordAuthentication yes/' \
+    -e 's/PasswordAuthentication no/PasswordAuthentication yes/' \
+    /etc/ssh/sshd_config
+
+# bastionからpsqlをパスワードなしで実行できるよう .pgpass を設定
+# 書式: hostname:port:database:user:password
+RUN echo 'udemart-db:5432:udemart:udemart:udemart123' > /home/student/.pgpass && \
+    chown student:student /home/student/.pgpass && \
+    chmod 600 /home/student/.pgpass
+
+# 接続先のデフォルト設定（psqlをそのまま実行できる）
+RUN echo 'export PGHOST=udemart-db' >> /home/student/.bashrc && \
+    echo 'export PGUSER=udemart' >> /home/student/.bashrc && \
+    echo 'export PGDATABASE=udemart' >> /home/student/.bashrc && \
+    echo 'export PGPORT=5432' >> /home/student/.bashrc && \
+    echo 'echo "✔ UdeMart Bastion Server"' >> /home/student/.bashrc && \
+    echo 'echo "  PostgreSQL: psql で接続できます"' >> /home/student/.bashrc && \
+    echo 'echo "  接続先: udemart-db:5432/udemart"' >> /home/student/.bashrc
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]
