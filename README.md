@@ -98,8 +98,9 @@ chapterNN-xxx/
 |---|---|
 | 解説者のマシン | MacBook Pro M5 無印 / メモリ 16GB |
 | PostgreSQL | Docker公式イメージ `postgres:16`（検証時: PostgreSQL 16.14） |
-| Docker | Docker Desktop 最新版 |
-| Docker Compose | Docker Compose v2 系 |
+| Docker Desktop | 4.73.0 |
+| Docker Engine | 29.4.3 |
+| Docker Compose | v5.1.3 |
 | 踏み台サーバー | Ubuntu 22.04 ベース |
 | DB メモリ制限 | 1GB（shared_buffers=256MB） |
 

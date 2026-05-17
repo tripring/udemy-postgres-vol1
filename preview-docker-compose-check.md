@@ -12,7 +12,9 @@
 | 項目 | バージョン / 条件 |
 |---|---|
 | PostgreSQL | Docker公式イメージ `postgres:16`（検証時: PostgreSQL 16.14） |
-| Docker Compose | v2系 |
+| Docker Desktop | 4.73.0 で動作確認 |
+| Docker Engine | 29.4.3 で動作確認 |
+| Docker Compose | v5.1.3 で動作確認 |
 | 踏み台サーバー | Ubuntu 22.04 ベース |
 | 使用ポート | `5432`, `2222` |
 
