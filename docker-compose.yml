@@ -34,6 +34,8 @@ services:
     container_name: udemart-bastion
     ports:
       - "2222:22"         # SSH接続用（踏み台サーバー）
+    volumes:
+      - .:/home/student/course
     depends_on:
       - postgres
     deploy:

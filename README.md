@@ -79,17 +79,17 @@ Docker Compose が使えるか不安な方は、購入前に `preview-docker-com
 
 ### 教材ファイルの配布方針
 
-この公開リポジトリには、環境構築手順・章ごとの解説・購入前プレビュー用のファイル・セクションごとの `practice/*.sql` を置いています。
+このリポジトリには、環境構築手順・章ごとの解説・データ投入用の `setup.sql`・セクションごとの `practice/*.sql` を置いています。
 
-章ごとのデータ投入に使用する `setup.sql` は、Udemy の各章に添付するリソースとして配布します。公開リポジトリだけでは事前データの準備が完結しないため、受講者は講座内のリソースをダウンロードしてから各章を進めてください。
+受講者はホストPCにこのリポジトリをクローンし、Docker Composeで起動した踏み台サーバーから同じ教材ファイルを参照します。教材はホストPC上に残るため、VS Code や Finder / Explorer でも確認できます。
 
-Udemyリソースを展開すると、各章は以下の構成になります。
+各章は以下の構成です。
 
 ```text
 chapterNN-xxx/
 ├── README.md        # ストーリー・解説・SQL例
-├── setup.sql        # 章専用データ投入スクリプト（Udemy配布）
-└── practice/        # セクションごとの実習ファイル（公開リポジトリ）
+├── setup.sql        # 章専用データ投入スクリプト
+└── practice/        # セクションごとの実習ファイル
 ```
 
 ### 動作確認環境
@@ -98,8 +98,9 @@ chapterNN-xxx/
 |---|---|
 | 解説者のマシン | MacBook Pro M5 無印 / メモリ 16GB |
 | PostgreSQL | Docker公式イメージ `postgres:16`（検証時: PostgreSQL 16.14） |
-| Docker | Docker Desktop 最新版 |
-| Docker Compose | Docker Compose v2 系 |
+| Docker Desktop | 4.73.0 |
+| Docker Engine | 29.4.3 |
+| Docker Compose | v5.1.3 |
 | 踏み台サーバー | Ubuntu 22.04 ベース |
 | DB メモリ制限 | 1GB（shared_buffers=256MB） |
 
@@ -123,7 +124,14 @@ chapterNN-xxx/
 
 踏み台サーバーを使う理由：macOS / Windows の環境差異をなくし、全員が同じLinux環境でpsqlを操作するためです。これは実際の本番環境でも一般的な構成です。
 
-> **Git のインストールは不要です。** 教材のクローンは踏み台サーバー内で行います。
+**Git**（必須）
+
+教材一式をホストPCに取得するために使用します。
+
+| OS | Git |
+|---|---|
+| macOS | `git --version` で確認。未インストールの場合は画面の案内に従ってCommand Line Toolsを入れる |
+| Windows 10 / 11 | [Git for Windows](https://git-scm.com/download/win) をインストール |
 
 ### Docker のディスク割り当て
 
@@ -196,23 +204,22 @@ docker compose down   # 該当のdocker-composeディレクトリで実行
 
 ## クイックスタート
 
-ホストPCに **Docker** が入っていれば OK です。Git のインストールは不要です。
+ホストPCに **Docker** と **Git** が入っていれば OK です。
 
-### 1. 起動ファイルを取得
+### 1. 教材をホストPCにクローン
 
 任意のディレクトリで以下を実行してください。
 
 ```bash
-mkdir udemy-postgres && cd udemy-postgres
-curl -O https://raw.githubusercontent.com/tripring/udemy-postgres-vol1/main/docker-compose.yml
-curl -O https://raw.githubusercontent.com/tripring/udemy-postgres-vol1/main/Dockerfile.bastion
+git clone https://github.com/tripring/udemy-postgres-vol1.git
+cd udemy-postgres-vol1
 ```
 
 ### 2. Docker で環境を起動
 
 ```bash
 # 初回はbastionイメージのビルドあり・数分かかります
-docker compose up -d
+docker compose up -d --build
 
 # 起動確認（udemart-db と udemart-bastion の2つが表示されればOK）
 docker compose ps
@@ -225,15 +232,9 @@ ssh -p 2222 student@localhost
 # パスワード: student123
 ```
 
-### 4. 教材をクローン
+### 4. 共通スキーマを作成
 
-bastion 内で実行します。
-
-```bash
-git clone https://github.com/tripring/udemy-postgres-vol1.git ~/course
-```
-
-### 5. 共通スキーマを作成
+SSH接続後、bastion 内で実行します。ホストPCにクローンした教材ディレクトリは、bastion 内の `~/course` として見えます。
 
 ```bash
 psql -f ~/course/chapter00-setup/init.sql
@@ -257,14 +258,14 @@ udemy-postgres-vol1/
 ├── preview-docker-compose-check.md # 購入前プレビュー用のDocker Compose確認手順
 ├── chapter00-setup/
 │   └── init.sql                    # 共通スキーマ定義（テーブル作成）
-├── chapter01-sql/                  # 実務SQL（practiceを公開。setupはUdemy配布）
-├── chapter02-tuning/               # 各章: practiceを公開。setupはUdemy配布
+├── chapter01-sql/                  # 実務SQL
+├── chapter02-tuning/               # パフォーマンスチューニング
 ├── chapter03-transaction/
 ├── chapter04-partitioning/
 └── chapter99-final/                # コース修了・振り返り・クリーンアップ手順
 ```
 
-Udemyリソースを展開した後の各章のディレクトリ構成:
+各章のディレクトリ構成:
 
 ```
 chapterNN-xxx/
@@ -280,8 +281,8 @@ chapterNN-xxx/
 
 ## 各章の進め方
 
-1. Udemyのセクションリソースから `setup.sql` をダウンロードし、bastion内の対象章ディレクトリに配置する
-2. `setup.sql` を実行して事前データを投入する
+1. bastion にSSH接続する
+2. 各章の `setup.sql` を実行して事前データを投入する
 3. `practice/` ディレクトリのファイルを順番に実行する
 
 ```bash

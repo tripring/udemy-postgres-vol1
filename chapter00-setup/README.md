@@ -51,6 +51,8 @@ netstat -an | findstr "2222"
 
 ## 1. Docker Composeの起動
 
+ホストPCでこのリポジトリをクローンし、リポジトリ直下で実行します。
+
 ```bash
 # udemy-postgres-vol1 ディレクトリで実行
 cd udemy-postgres-vol1
@@ -133,11 +135,14 @@ psql -h udemart-db -U udemart -d udemart
 udemart=#
 ```
 
-### Step 3: bastionからsetup.sqlを実行する
+### Step 3: bastionからinit.sql / setup.sqlを実行する
 
-コース教材のSQLファイルはbastion内の `~/course/` からアクセスできます。
+ホストPCにクローンした教材ディレクトリは、bastion内の `~/course/` にマウントされています。
 
 ```bash
+# まず共通スキーマを作成
+psql -f ~/course/chapter00-setup/init.sql
+
 # 例: Chapter 01のsetup.sqlを実行
 psql -f ~/course/chapter01-sql/setup.sql
 
@@ -274,8 +279,11 @@ erDiagram
 # コンテナとボリュームを削除してリセット
 docker compose down -v
 
-# 再起動（init.sqlが再実行されてスキーマが再作成される）
-docker compose up -d
+# 再起動
+docker compose up -d --build
+
+# bastionにSSH接続し、共通スキーマを作成し直す
+psql -f ~/course/chapter00-setup/init.sql
 ```
 
 ---
@@ -286,5 +294,5 @@ docker compose up -d
 
 ```bash
 # setup.sqlでデータを投入
-psql -h localhost -U udemart -d udemart -f chapter01-sql/setup.sql
+psql -f ~/course/chapter01-sql/setup.sql
 ```

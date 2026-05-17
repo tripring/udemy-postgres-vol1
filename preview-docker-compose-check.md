@@ -12,7 +12,9 @@
 | 項目 | バージョン / 条件 |
 |---|---|
 | PostgreSQL | Docker公式イメージ `postgres:16`（検証時: PostgreSQL 16.14） |
-| Docker Compose | v2系 |
+| Docker Desktop | 4.73.0 で動作確認 |
+| Docker Engine | 29.4.3 で動作確認 |
+| Docker Compose | v5.1.3 で動作確認 |
 | 踏み台サーバー | Ubuntu 22.04 ベース |
 | 使用ポート | `5432`, `2222` |
 
@@ -78,10 +80,9 @@ netstat -an | findstr "2222"
 
 ## 3. 講座環境を起動する
 
-リポジトリを配置したディレクトリで、Vol.1 のディレクトリに移動して起動します。
+Udemyの購入前プレビューに添付された確認用ファイルを展開し、そのディレクトリに移動して起動します。
 
 ```bash
-cd udemy-postgres-vol1
 docker compose up -d --build
 ```
 

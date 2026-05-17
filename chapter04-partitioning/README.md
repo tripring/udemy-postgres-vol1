@@ -39,7 +39,7 @@ ORDER BY 1;
 本チャプター用のサンプルデータを投入します。`setup.sql` を実行してください（500,000件の注文データを生成するため、数分かかります）。
 
 ```bash
-psql -h localhost -U udemart -d udemart -f setup.sql
+psql -f ~/course/chapter04-partitioning/setup.sql
 ```
 
 実行後、以下のような出力が表示されれば準備完了です。
