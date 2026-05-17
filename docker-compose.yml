@@ -10,7 +10,6 @@ services:
       - "5432:5432"       # 直接接続用（Chapter 01〜04）
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./chapter00-setup/init.sql:/docker-entrypoint-initdb.d/init.sql
     command: >
       postgres
       -c shared_buffers=256MB
@@ -35,8 +34,6 @@ services:
     container_name: udemart-bastion
     ports:
       - "2222:22"         # SSH接続用（踏み台サーバー）
-    volumes:
-      - .:/home/student/course  # コース教材をbastion内から参照できるようにマウント
     depends_on:
       - postgres
     deploy:
