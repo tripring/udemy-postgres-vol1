@@ -35,7 +35,52 @@ WHERE ordered_at >= '2025-01-01' AND ordered_at < '2025-02-01';
 
 
 -- ------------------------------------------------------------
--- 5-3. 古いパーティションをデタッチする（アーカイブ）
+-- 5-3. 悪化体験：未来月パーティション作成漏れでDEFAULTに流れる
+--
+-- 2025年2月のパーティションはまだ作っていません。
+-- その状態で2025年2月の注文が入ると、エラーにはならず DEFAULT パーティションに入ります。
+-- これは「動いているように見えるが、後で運用事故になる」パターンです。
+-- ------------------------------------------------------------
+INSERT INTO orders_partitioned (customer_id, status, total_amount, ordered_at)
+VALUES (1, 'confirmed', 60000.00, '2025-02-15 12:00:00+09');
+
+-- DEFAULT パーティションに入ってしまったことを確認
+SELECT count(*) AS leaked_to_default
+FROM orders_default
+WHERE ordered_at >= '2025-02-01' AND ordered_at < '2025-03-01';
+
+-- DEFAULTに流れたデータを検出する運用クエリ
+SELECT
+    MIN(ordered_at) AS min_ordered_at,
+    MAX(ordered_at) AS max_ordered_at,
+    COUNT(*)        AS rows_in_default
+FROM orders_default;
+
+-- 後片付け
+DELETE FROM orders_default
+WHERE ordered_at >= '2025-02-01' AND ordered_at < '2025-03-01';
+
+
+-- ------------------------------------------------------------
+-- 5-4. DELETE大量削除 vs DETACH PARTITION
+--
+-- 古い月のデータを消すとき、DELETEで1行ずつ消すと時間もWALもロックも重くなります。
+-- ここではDELETEをトランザクション内で実行してROLLBACKし、重さだけ確認します。
+-- その後、DETACH PARTITIONでメタデータ操作として切り離します。
+-- ------------------------------------------------------------
+\timing on
+
+BEGIN;
+
+EXPLAIN (ANALYZE, BUFFERS)
+DELETE FROM orders_partitioned
+WHERE ordered_at >= '2022-01-01' AND ordered_at < '2022-02-01';
+
+ROLLBACK;
+
+
+-- ------------------------------------------------------------
+-- 5-5. 古いパーティションをデタッチする（アーカイブ）
 --
 -- DETACH PARTITION は物理削除しない。
 -- デタッチ後は orders_2022_01 が独立したテーブルとして残る。
@@ -58,7 +103,7 @@ SELECT count(*) AS archived_rows FROM orders_2022_01;
 
 
 -- ------------------------------------------------------------
--- 5-4. デタッチしたパーティションを親テーブルに再アタッチする
+-- 5-6. デタッチしたパーティションを親テーブルに再アタッチする
 --
 -- アーカイブをやり直したい場合などに使う。
 -- FROM/TO の範囲は元の定義と一致させる必要がある。
@@ -70,9 +115,11 @@ ALTER TABLE orders_partitioned ATTACH PARTITION orders_2022_01
 SELECT count(*) AS reattached_rows FROM orders_partitioned
 WHERE ordered_at >= '2022-01-01' AND ordered_at < '2022-02-01';
 
+\timing off
+
 
 -- ------------------------------------------------------------
--- 5-5. （参考）古いパーティションを完全に削除する
+-- 5-7. （参考）古いパーティションを完全に削除する
 --
 -- アーカイブも不要になったら DROP TABLE で削除する。
 -- まずデタッチしてから DROP するのが安全な手順。
@@ -82,7 +129,7 @@ WHERE ordered_at >= '2022-01-01' AND ordered_at < '2022-02-01';
 
 
 -- ------------------------------------------------------------
--- 5-6. （参考）PostgreSQL 14 以降: CONCURRENTLY で無停止デタッチ
+-- 5-8. （参考）PostgreSQL 14 以降: CONCURRENTLY で無停止デタッチ
 --
 -- 通常の DETACH は親テーブルに ACCESS EXCLUSIVE ロックをかけるため
 -- 本番環境では業務が止まるリスクがある。

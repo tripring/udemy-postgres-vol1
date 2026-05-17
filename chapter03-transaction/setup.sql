@@ -5,6 +5,9 @@
 --   psql -f ~/udemy-postgres-vol1/chapter03-transaction/setup.sql
 -- ============================================================
 
+DROP TABLE IF EXISTS index_lock_lab;
+DROP TABLE IF EXISTS job_queue;
+
 -- 既存データをリセット（外部キー制約があるため順番に注意）
 TRUNCATE order_items, orders, inventory, products, categories, customers RESTART IDENTITY CASCADE;
 

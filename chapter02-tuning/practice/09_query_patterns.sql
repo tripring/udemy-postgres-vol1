@@ -94,13 +94,19 @@ WHERE c.prefecture = '東京都';
 -- 9-3. LIKE 部分一致 と pg_trgm
 -- ----------------------------------------------------------------
 
--- 前方一致: B-tree インデックスが効く
-EXPLAIN SELECT * FROM customers WHERE name LIKE '山田%';
--- → 既存のインデックスがあれば Index Scan
+-- 繰り返し実行しても「GINなし → GINあり」の差が見えるように、
+-- まず前回作成したGINインデックスを削除しておきます。
+DROP INDEX IF EXISTS idx_customers_name_trgm;
+
+-- B-treeインデックスを作成します。
+-- ただし、B-treeは値の先頭から順に探す構造なので、
+-- 文字列の途中を探す LIKE '%keyword%' には基本的に効きません。
+CREATE INDEX IF NOT EXISTS idx_customers_name_btree ON customers (name);
 
 -- 部分一致: B-tree インデックスが効かない
-EXPLAIN SELECT * FROM customers WHERE name LIKE '%山田%';
--- → Seq Scan（全件スキャン）
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM customers WHERE name LIKE '%12345%';
+-- → Seq Scan になりやすい。これが LIKE '%keyword%' の絶望ポイント。
 
 -- pg_trgm 拡張を有効化
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -109,14 +115,14 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING GIN (name gin_trgm_ops);
 
 -- 部分一致でもインデックスが効くようになる
-EXPLAIN SELECT * FROM customers WHERE name LIKE '%山田%';
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM customers WHERE name LIKE '%12345%';
 -- → Bitmap Index Scan on idx_customers_name_trgm
 
 -- 類似度検索（pg_trgm の応用）
--- similarity() 関数で「山田」に近い名前を探す
-SELECT name, similarity(name, '山田') AS sim
+-- similarity() 関数で「顧客_12」に近い名前を探す
+SELECT name, similarity(name, '顧客_12') AS sim
 FROM customers
-WHERE name % '山田'  -- % 演算子は similarity > 0.3 のもの
+WHERE name % '顧客_12'  -- % 演算子は similarity > 0.3 のもの
 ORDER BY sim DESC
 LIMIT 10;
-

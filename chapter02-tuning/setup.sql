@@ -15,13 +15,21 @@ DROP MATERIALIZED VIEW IF EXISTS mv_daily_sales;
 DROP VIEW IF EXISTS v_daily_sales;
 DROP TABLE IF EXISTS order_logs_wrong;
 DROP TABLE IF EXISTS order_logs_correct;
+DROP TABLE IF EXISTS index_cost_lab;
 DROP TABLE IF EXISTS orders_2025;
 DROP INDEX IF EXISTS idx_orders_status_ordered_at;
 DROP INDEX IF EXISTS idx_order_items_order_id;
 DROP INDEX IF EXISTS idx_customers_email_upper;
 DROP INDEX IF EXISTS idx_orders_ordered_at;
+DROP INDEX IF EXISTS idx_customers_name_btree;
 DROP INDEX IF EXISTS idx_customers_name_trgm;
 DROP INDEX IF EXISTS idx_orders_ordered_at_desc;
+DROP INDEX IF EXISTS idx_index_cost_lab_customer_id;
+DROP INDEX IF EXISTS idx_index_cost_lab_status_ordered_at;
+DROP INDEX IF EXISTS idx_index_cost_lab_ordered_at;
+DROP INDEX IF EXISTS idx_index_cost_lab_email_lower;
+DROP INDEX IF EXISTS idx_index_cost_lab_total_amount;
+DROP INDEX IF EXISTS idx_index_cost_lab_prefecture_status;
 
 -- ============================================================
 -- 既存データをリセット

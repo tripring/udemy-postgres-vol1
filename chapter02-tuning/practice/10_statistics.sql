@@ -38,16 +38,21 @@ CREATE INDEX idx_orders_2025_status_ordered_at ON orders_2025 (status, ordered_a
 INSERT INTO orders_2025
 SELECT * FROM orders LIMIT 10000;
 
--- EXPLAIN で予測行数を確認（statisticsがないので rows推定が0か1になる）
-EXPLAIN SELECT * FROM orders_2025 WHERE status = 'delivered';
--- ↑ rows= の数値に注目（実際の件数より大幅に少ない推定になるはず）
+-- EXPLAIN ANALYZE で予測行数と実測行数のズレを確認
+-- rows= が予測、actual rows= が実測です。
+-- ANALYZE前は統計が薄いため、予測が外れやすいことを確認します。
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM orders_2025 WHERE status = 'delivered';
+-- ↑ rows= と actual rows= の差に注目
 
 -- ANALYZE を実行して統計を更新
 ANALYZE orders_2025;
 
--- ANALYZE後の実行計画を確認（rows推定が現実に近づく）
-EXPLAIN SELECT * FROM orders_2025 WHERE status = 'delivered';
--- ↑ rows= が実際のデータ量に近い数値になっているか確認
+-- ANALYZE後にもう一度確認
+-- rows= が actual rows= に近づいていれば、統計情報が効いている証拠です。
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM orders_2025 WHERE status = 'delivered';
+-- ↑ 実行時間だけでなく「予測の精度」が改善したかを見る
 
 
 -- 10-3. 予測行数と実際の行数のズレを確認する
@@ -86,4 +91,3 @@ ANALYZE orders;
 -- 拡張統計あり/なしで estimated rows の精度が変わる
 EXPLAIN SELECT count(*) FROM orders
 WHERE customer_id = 1 AND status = 'delivered';
-
