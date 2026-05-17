@@ -78,10 +78,9 @@ netstat -an | findstr "2222"
 
 ## 3. 講座環境を起動する
 
-リポジトリを配置したディレクトリで、Vol.1 のディレクトリに移動して起動します。
+Udemyの購入前プレビューに添付された確認用ファイルを展開し、そのディレクトリに移動して起動します。
 
 ```bash
-cd udemy-postgres-vol1
 docker compose up -d --build
 ```
 

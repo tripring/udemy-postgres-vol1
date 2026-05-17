@@ -1,5 +1,5 @@
 -- UdeMart 共通スキーマ定義
--- このファイルはDocker起動時に自動実行されます
+-- Chapter 00で手動実行します
 
 -- pg_stat_statements拡張（スロークエリ調査で使用）
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;

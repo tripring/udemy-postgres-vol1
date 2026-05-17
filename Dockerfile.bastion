@@ -39,7 +39,7 @@ RUN echo 'export PGHOST=udemart-db' >> /home/student/.bashrc && \
     echo 'echo "✔ UdeMart Bastion Server"' >> /home/student/.bashrc && \
     echo 'echo "  PostgreSQL: psql で接続できます"' >> /home/student/.bashrc && \
     echo 'echo "  接続先: udemart-db:5432/udemart"' >> /home/student/.bashrc && \
-    echo 'if [ ! -d "$HOME/course" ]; then echo ""; echo "  ⚠ まず教材をクローンしてください:"; echo "    git clone https://github.com/tripring/udemy-postgres-vol1.git ~/course"; fi' >> /home/student/.bashrc
+    echo 'if [ ! -d "$HOME/course" ]; then echo ""; echo "  ⚠ 教材ディレクトリが見つかりません。ホストPCでリポジトリ直下から docker compose up -d --build を実行してください。"; fi' >> /home/student/.bashrc
 
 EXPOSE 22
 
