@@ -3,7 +3,7 @@
 -- ============================================================
 -- このスクリプトは実行に数分かかる場合があります
 -- 実行コマンド:
---   psql -h localhost -U udemart -d udemart -f setup.sql
+--   psql -f ~/udemy-postgres-vol1/chapter02-tuning/setup.sql
 -- ============================================================
 
 -- pg_stat_statements拡張の有効化

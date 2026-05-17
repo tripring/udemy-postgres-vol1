@@ -35,7 +35,7 @@ services:
     ports:
       - "2222:22"         # SSH接続用（踏み台サーバー）
     volumes:
-      - .:/home/student/course
+      - .:/home/student/udemy-postgres-vol1
     depends_on:
       - postgres
     deploy:
