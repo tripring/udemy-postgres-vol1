@@ -1,0 +1,15 @@
+# Public learner-facing repository.
+# Track Docker and SQL files here. Keep course text and instructor-only assets
+# in the private udemy-postgres-vol1-instructor repository.
+
+.DS_Store
+
+# Instructor/private materials should never be committed to the public repo.
+_instructor/
+_udemy-resources/
+course-text/
+instructor-notes/
+
+# Course text Markdown is managed in the private instructor repository.
+*.md
+!LICENSE.md
