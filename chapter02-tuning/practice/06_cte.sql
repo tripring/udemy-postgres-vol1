@@ -127,6 +127,56 @@ LIMIT 20;
 -- MATERIALIZED あり           : 「ここで必ず絞り込む」と明示したいとき。
 --                               デバッグや、複雑なクエリで想定外の最適化を防ぎたいとき。
 
-\timing off
 
+-- ----------------------------------------------------------------
+-- 6-4. 悪化体験：CTEを使っても必ず速くなるわけではない
+-- ----------------------------------------------------------------
+-- WITH句は「分割すれば正義」ではありません。
+-- 大きなテーブルを先に丸ごとMATERIALIZEDしてから絞り込むと、
+-- かえって余計な中間結果を作って遅くなることがあります。
+--
+-- NG例:
+--   1. orders 全件を all_orders として一度固定する
+--   2. その後で status / ordered_at を絞り込む
+--
+-- 本来は 6-2 のように「最初のCTEで絞る」べきです。
+EXPLAIN ANALYZE
+WITH all_orders AS MATERIALIZED (
+    SELECT id, customer_id, status, ordered_at
+    FROM orders
+),
+target_orders AS (
+    SELECT id, customer_id
+    FROM all_orders
+    WHERE status     = 'delivered'
+      AND ordered_at >= '2024-01-01'
+),
+spending_summary AS (
+    SELECT
+        t.customer_id,
+        oi.product_id,
+        SUM(oi.quantity * oi.unit_price) AS amount
+    FROM target_orders t
+    JOIN order_items oi ON oi.order_id = t.id
+    GROUP BY t.customer_id, oi.product_id
+)
+SELECT
+    c.name,
+    cat.name      AS category,
+    SUM(s.amount) AS total_spent
+FROM spending_summary s
+JOIN customers c    ON c.id   = s.customer_id
+JOIN products p     ON p.id   = s.product_id
+JOIN categories cat ON cat.id = p.category_id
+GROUP BY c.id, c.name, cat.name
+ORDER BY total_spent DESC
+LIMIT 20;
+
+-- 比較ポイント:
+--   6-2: 最初に条件で絞ってからJOINする
+--   6-4: 全件をCTEに固定してから絞る
+--
+-- WITH句は「処理の分割」ではなく「どこで行数を減らすか」が重要です。
+
+\timing off
 

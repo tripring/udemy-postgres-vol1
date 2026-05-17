@@ -33,7 +33,8 @@ SELECT
 FROM orders
 WHERE status != 'cancelled'
 GROUP BY DATE(ordered_at)
-ORDER BY sale_date DESC;
+ORDER BY sale_date DESC
+LIMIT 10;
 
 
 -- 5-2. マテリアライズドビューとして結果を保存する
@@ -80,7 +81,60 @@ SELECT * FROM mv_daily_sales ORDER BY sale_date DESC LIMIT 10;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
 
 
--- 5-6. 通常のVIEWとの比較
+-- 5-6. 悪化体験：「速いけど古い」を確認する
+-- ----------------------------------------------------------------
+-- ここがマテリアライズドビューの最重要ポイントです。
+-- 参照は速いが、元テーブルに新しい注文が入っても自動では反映されません。
+--
+-- 未来日付のテスト注文を1件だけ入れて、
+-- orders（元テーブル）と mv_daily_sales（保存済み集計）の差を確認します。
+DROP TABLE IF EXISTS mv_test_order_id;
+CREATE TEMP TABLE mv_test_order_id AS
+WITH inserted AS (
+    INSERT INTO orders (customer_id, status, total_amount, ordered_at)
+    VALUES (1, 'delivered', 99999.00, TIMESTAMP '2030-01-15 10:00:00')
+    RETURNING id
+)
+SELECT id FROM inserted;
+
+-- 元テーブルには2030-01-15の売上が見える
+SELECT
+    'orders（元テーブル）' AS source,
+    DATE(ordered_at)      AS sale_date,
+    COUNT(*)              AS order_count,
+    SUM(total_amount)     AS total_sales
+FROM orders
+WHERE ordered_at >= '2030-01-15' AND ordered_at < '2030-01-16'
+GROUP BY DATE(ordered_at);
+
+-- しかし、REFRESH前のマテリアライズドビューにはまだ見えない
+SELECT
+    'mv_daily_sales（REFRESH前）' AS source,
+    sale_date,
+    order_count,
+    total_sales
+FROM mv_daily_sales
+WHERE sale_date = DATE '2030-01-15';
+
+-- REFRESHすると保存済み集計が作り直され、2030-01-15が見えるようになる
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
+
+SELECT
+    'mv_daily_sales（REFRESH後）' AS source,
+    sale_date,
+    order_count,
+    total_sales
+FROM mv_daily_sales
+WHERE sale_date = DATE '2030-01-15';
+
+-- 後片付け。教材を繰り返し実行できるよう、テスト注文を削除して再度REFRESHする。
+DELETE FROM orders
+WHERE id IN (SELECT id FROM mv_test_order_id);
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
+
+
+-- 5-7. 通常のVIEWとの比較
 -- ----------------------------------------------------------------
 -- 通常のVIEWを作成して、EXPLAIN で違いを確認します。
 -- VIEWはクエリの「別名」にすぎないため、参照するたびに全件スキャンが走ります。

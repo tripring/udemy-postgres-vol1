@@ -42,6 +42,21 @@ WHERE cardinality(pg_blocking_pids(blocked.pid)) > 0;
 -- ---- 6-3. idle in transaction の検出 -----------------------
 -- BEGIN を発行したままクエリを実行せずに放置したセッションを検出する。
 -- ロックを持ち続けるため他のクエリをブロックし続ける危険な状態。
+--
+-- 【悪化体験】
+-- ターミナルAで次を実行し、COMMITせずに放置する。
+--
+--   BEGIN;
+--   UPDATE inventory SET quantity = quantity WHERE product_id = 1;
+--
+-- そのままターミナルAで何もしないと、状態は idle in transaction になる。
+-- この状態でもロックは残り、他のセッションを待たせ続ける。
+--
+-- ターミナルBで次を実行すると、ロック待ちになる。
+--
+--   UPDATE inventory SET quantity = quantity WHERE product_id = 1;
+--
+-- 監視用ターミナルで下のSQLを実行し、idle_duration を確認する。
 
 SELECT
     pid,
@@ -122,6 +137,35 @@ ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS priority INTEGER DEFAULT 0;
 -- CREATE INDEX CONCURRENTLY: テーブルロックを最小化して安全にインデックスを追加
 -- 通常の CREATE INDEX は ShareLock を取るため INSERT/UPDATE/DELETE をブロックする
 
+-- 【悪化体験】通常の CREATE INDEX が書き込みを待たせる
+--
+-- 大きめの検証テーブルを作る。
+DROP TABLE IF EXISTS index_lock_lab;
+
+CREATE TABLE index_lock_lab AS
+SELECT
+    g AS id,
+    (ARRAY['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])[(random() * 4 + 1)::INTEGER] AS status,
+    NOW() - ((random() * 365)::INTEGER || ' days')::INTERVAL AS created_at,
+    md5(g::TEXT) AS payload
+FROM generate_series(1, 200000) AS g;
+
+-- ターミナルA:
+--   BEGIN;
+--   CREATE INDEX idx_index_lock_lab_status ON index_lock_lab (status);
+--   -- COMMITせずに止める
+--
+-- ターミナルB:
+--   INSERT INTO index_lock_lab VALUES (999999, 'pending', NOW(), 'blocked?');
+--   -- ターミナルAがCOMMIT/ROLLBACKするまで待たされる
+--
+-- 監視用ターミナル:
+--   このファイル冒頭の 6-1 のSQLを実行し、ブロック関係を見る。
+--
+-- 後片付け:
+--   ターミナルAで ROLLBACK;
+--   ターミナルBの待機が解除されることを確認する。
+
 -- 通常のインデックス作成（INSERT/UPDATE/DELETE をブロック）
 -- CREATE INDEX idx_jq_status ON job_queue (status);
 
@@ -131,6 +175,26 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_jq_status_created
 
 -- ---- 6-8. lock_timeout と statement_timeout の設定 --------
 -- ロック待ちや長時間クエリを自動で止めるタイムアウト設定
+
+-- 【ありがたみ体験】待ち続けるセッションと、5秒で失敗するセッションを比較する
+--
+-- ターミナルA:
+--   BEGIN;
+--   UPDATE inventory SET quantity = quantity WHERE product_id = 1;
+--   -- COMMITせずにロックを保持
+--
+-- ターミナルB（タイムアウトなし）:
+--   UPDATE inventory SET quantity = quantity WHERE product_id = 1;
+--   -- ずっと待たされる
+--
+-- ターミナルBを Ctrl+C で止めたあと、今度は lock_timeout を設定する。
+--
+-- ターミナルB（タイムアウトあり）:
+--   SET lock_timeout = '5s';
+--   UPDATE inventory SET quantity = quantity WHERE product_id = 1;
+--   -- 5秒後に ERROR: canceling statement due to lock timeout
+--
+-- 本番では、待ち続けて画面が固まるより、早く失敗してリトライやエラー表示に回す方が安全な場面がある。
 
 -- セッションレベルで設定（この接続のみ有効）
 SET lock_timeout = '5s';
@@ -152,5 +216,4 @@ SET statement_timeout = 0;
 SELECT rolname, rolconfig
 FROM pg_roles
 WHERE rolname = 'udemart';
-
 
